@@ -459,12 +459,17 @@ class InventoryAccess
 			return $access_level;
 		
 		
-		$query="SELECT inventory.NSN, items.item_name, inventory.quantity, inventory.par_level FROM inventory, items WHERE inventory.NSN=items.NSN AND inventory.quantity<=inventory.par_level;";
+		$query="SELECT storerooms.storeroom_name, inventory.NSN, items.item_name, inventory.quantity, inventory.par_level 
+			FROM inventory, items, storerooms 
+			WHERE inventory.NSN=items.NSN AND 
+			inventory.storeroom_id=storerooms.storeroom_id AND
+			inventory.quantity<=inventory.par_level;";
 		$result = $this->db->query($query);
 		$html= "<div class='container'><div class='row'><div class='col-md-12'>
 				<table class='table table-bordered table-striped table-condensed table-responsive' style='margin: auto; width:50%;'>
 					<thead>
 						<tr>
+							<th>Storeroom</th>
 							<th>NSN</th>
 							<th>Item Name</th>
 							<th>Quantity</th>
@@ -490,13 +495,7 @@ class InventoryAccess
 
 	/*
 	Gets the database's recommended par levels.  
-	One of the problems with the storeroom is excessive stock.  
-	With the quick and guaranteed delivery time of most items (overnight for over 80% of items), 
-	the plan is to only keep on hand double the par level.
-	The par level should be enough that when supplies are reordered, they will be close to running out (but not actually run out, so buffer is added in).
-	With this system, most supplies will be ordered multiple times per week, but in low quantities so the storeroom has what it needs and only that.
-	Par level should be calculated as average time that it takes for an order to arrive for that line item, multiplied by the burn rate of that item.
-	Buffer should be double the average delivery time (should be very short).
+	The par level should be enough that when supplies are reordered, they will have more than enough time to receive the items before running out.
 	*/
 	public function reportRecommendedParLevels()
 	{
@@ -504,15 +503,17 @@ class InventoryAccess
 		if(!$access_level=$this->access_level(self::GUEST, "run a Recommended Par Level Report"))
 			return $access_level;
 
-		$query="SELECT historical_usage.NSN, items.item_name, MIN(historical_usage.date_used), MAX(historical_usage.date_used), SUM(historical_usage.quantity)
-			FROM historical_usage, items
-			WHERE items.NSN=historical_usage.NSN 
+		$query="SELECT storerooms.storeroom_name, historical_usage.NSN, items.item_name, MIN(historical_usage.date_used), MAX(historical_usage.date_used), SUM(historical_usage.quantity), historical_usage.storeroom_id
+			FROM historical_usage, items, storerooms
+			WHERE items.NSN=historical_usage.NSN AND
+			storerooms.storeroom_id=historical_usage.storeroom_id
 			Group By historical_usage.NSN;";
 		$result= $this->db->query($query);
 		$html= "<div class='container'><div class='row'><div class='col-md-12'>
 				<table class='table table-bordered table-striped table-condensed table-responsive' style='margin: auto; width:50%;'>
 					<thead>
 						<tr>
+							<th>Storeroom</th>
 							<th>NSN</th>
 							<th>Item Name</th>
 							<th>Recommended Par Level</th>
@@ -521,24 +522,28 @@ class InventoryAccess
 					<tbody>";
 		while($row= $result->fetch_row())
 		{
-			$NSN=$row[0];
-			$item_name=$row[1];
+			$storeroom_name=$row[0];
+			$NSN=$row[1];
+			$item_name=$row[2];
 
-			$old_date= new DateTime($row[2]);
-			$new_date= new DateTime($row[3]);
+			$old_date= new DateTime($row[3]);
+			$new_date= new DateTime($row[4]);
 			$diff= $old_date->diff($new_date);
 			$ave_use=$row[4]/($diff->days); //average number of item used per day (BURN RATE)
 			
+			$storeroom_id=$row[5];
 			//Get the average time it takes for an order to be delivered for this item
 			$query2= "SELECT AVG(datediff(order_line_items.date_received, orders.date_ordered)) 
 				FROM orders, order_line_items 
 				WHERE order_line_items.order_id=orders.order_id
-				AND order_line_items.NSN=$NSN;";
+				AND order_line_items.NSN=$NSN
+				AND orders.storeroom_id=$storeroom_id;";
 			$result2= $this->db->query($query2);
 			$row2=$result2->fetch_row();
 
 			$par_level=2*$ave_use*$row2[0];//double the order time * burn rate
 			$html .= "<tr>
+						<td> $storeroom_name </td> 
 						<td> $NSN </td>
 						<td> $item_name </td>
 						<td> $par_level </td>
@@ -559,9 +564,10 @@ class InventoryAccess
 		if(!$access_level=$this->access_level(self::GUEST, "run a Historical Usage of Items Report"))
 			return $access_level;
 
-		$query="SELECT historical_usage.date_used, historical_usage.NSN, items.item_name, historical_usage.quantity
-			FROM historical_usage, items
+		$query="SELECT historical_usage.date_used, storerooms.storeroom_name, historical_usage.NSN, items.item_name, historical_usage.quantity
+			FROM historical_usage, items, storerooms
 			WHERE items.NSN=historical_usage.NSN 
+			AND historical_usage.storeroom_id=storerooms.storeroom_id
 			ORDER BY historical_usage.date_used DESC;";
 		$result= $this->db->query($query);
 		$html= "<div class='container'><div class='row'><div class='col-md-12'>
@@ -569,6 +575,7 @@ class InventoryAccess
 					<thead>
 						<tr>
 							<th>Date Used</th>
+							<th>Storeroom</th>
 							<th>NSN</th>
 							<th>Item Name</th>
 							<th>Quantity Used</th>
@@ -644,13 +651,13 @@ class InventoryAccess
 	Update the inventory quantity.  
 	Used for when a mistake was made in using or receiving an item, or for gains/loss by physical inventory.
 	*/
-	public function ADMIN_updateInventoryQuantity($NSN, $quantity)
+	public function ADMIN_updateInventoryQuantity($NSN, $storeroom_id, $quantity)
 	{
 		//Check if admin rights to update the quantity in the inventory
 		if(!$access_level=$this->access_level(self::ADMIN, "update inventory quantity"))
 			return $access_level;
 
-		$sql= "UPDATE inventory SET quantity=$quantity WHERE NSN=$NSN;";
+		$sql= "UPDATE inventory SET quantity=$quantity WHERE NSN=$NSN AND storeroom_id=$storeroom_id;";
 
 		//Problem updating inventory's quantity
 		if(!$this->db->query($sql) || $this->db->affected_rows==0)
@@ -669,7 +676,7 @@ class InventoryAccess
 		if(!$access_level=$this->access_level(self::ADMIN, "update inventory information"))
 			return $access_level;
 
-		$query= "SELECT NSN, quantity FROM inventory;";
+		$query= "SELECT NSN, storeroom_id, quantity FROM inventory;";
 		$result= $this->db->query($query);
 
 		$html= "<div class='form-group'><h5>NSN &emsp;&emsp;&emsp;&emsp; Current Quantity</h5>
@@ -678,8 +685,10 @@ class InventoryAccess
 		while($row=$result->fetch_assoc())
 		{
 			$NSN= $row['NSN'];
+			$storeroom_id= $row['storeroom_id'];
+			$combinedValue= $NSN.$storeroom_id;
 			$quantity= $row['quantity'];
-			$html .= "<option value= '$NSN'>$NSN &emsp; $quantity</option>";
+			$html .= "<option value= '$combinedValue'>$NSN &emsp; $storeroom_id &emsp; $quantity</option>";
 		}
 		$html .= "</select><h5>New Quantity</h5><input type='number' name='quantity'></div>";
 		echo $html;
@@ -689,13 +698,13 @@ class InventoryAccess
 	Update the inventory quantity.  
 	Used for when a mistake was made in using or receiving an item, or for gains/loss by physical inventory.
 	*/
-	public function ADMIN_updateInventoryInfo($NSN, $quantity, $location, $par_level, $on_order)
+	public function ADMIN_updateInventoryInfo($NSN, $storeroom_id, $quantity, $par_level,)
 	{
 		//Check if admin rights to update the quantity in the inventory
 		if(!$access_level=$this->access_level(self::ADMIN, "update inventory information"))
 			return $access_level;
 
-		$sql= "UPDATE inventory SET quantity=$quantity, location='$location', par_level=$par_level, on_order=$on_order WHERE NSN=$NSN;";
+		$sql= "UPDATE inventory SET quantity=$quantity, par_level=$par_level WHERE NSN=$NSN AND storeroom_id=$storeroom_id;";
 
 		//Problem updating inventory's quantity
 		if(!$this->db->query($sql) || $this->db->affected_rows==0)
@@ -714,7 +723,7 @@ class InventoryAccess
 		if(!$access_level=$this->access_level(self::ADMIN, "update inventory information"))
 			return $access_level;
 
-		$query= "SELECT NSN FROM inventory;";
+		$query= "SELECT NSN, storeroom_id FROM inventory;";
 		$result= $this->db->query($query);
 
 		$html= "<div class='form-group'><h5>NSN</h5>
@@ -723,24 +732,12 @@ class InventoryAccess
 		while($row=$result->fetch_assoc())
 		{
 			$NSN= $row['NSN'];
-			$html .= "<option value= '$NSN'>$NSN</option>";
+			$storeroom_id= $row['storeroom_id'];
+			$combinedValue= $NSN.$storeroom_id;
+			$html .= "<option value= '$combinedValue'>$NSN &emsp; $storeroom_id</option>";
 		}
 		$html .= "</select></div>";
 		echo $html;
-	}
-
-	/*
-
-	*/
-	public function ADMIN_getUpdatableInventoryInfoForItemID($NSN)
-	{
-		//Check if admin rights to update information in the inventory
-		if(!$access_level=$this->access_level(self::ADMIN, "update inventory information"))
-			return $access_level;
-		echo "<h1>$NSN</h5>";
-		$query= "SELECT * FROM inventory WHERE NSN=$NSN;";
-		$result= $this->db->query($query);
-		return $result->fetch_assoc();
 	}
 
 	/*
@@ -793,44 +790,6 @@ class InventoryAccess
 		$html .= "</select></div>";
 		echo $html;
 	}
-
-	/*
-	Delete a vendor from the vendors table (and vendor_prices table)
-	*/
-	public function ADMIN_deleteVendor($vendor_id)
-	{
-		//Check if admin rights to delete a vendor
-		if(!$access_level=$this->access_level(self::ADMIN, "delete a Vendor"))
-			return $access_level;
-
-		//orders table references vendors table, don't delete information if something references it
-		$query="SELECT * FROM orders WHERE vendor_id=$vendor_id;";
-		$this->db->query($query);
-		if($this->db->affected_rows>0)
-		{
-			echo "Cannot delete vendor $vendor_id while there are orders for them.".PHP_EOL;
-			return false;
-		}
-
-
-		//delete from vendor_prices first, because its a child table of vendors
-		$sql= "DELETE FROM vendor_prices WHERE vendor_id=$vendor_id;";
-		if(!$this->db->query($sql))
-		{
-			echo "Error deleting $vendor_id from the vendor_prices table.".PHP_EOL;
-			return false;
-		}
-
-		//delete from vendors table
-		$sql= "DELETE FROM vendors WHERE vendor_id=$vendor_id;";
-		if(!$this->db->query($sql))
-		{
-			echo "Error deleting $vendor_id from the vendors table.".PHP_EOL;
-			return false;
-		}	
-		return true;
-	}
-
 
 }
 

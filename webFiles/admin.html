@@ -1,0 +1,249 @@
+<?php
+require_once('../InterfaceLib.inc');
+
+$db= new InventoryAccess();
+
+if(isset($_COOKIE['username']) && isset($_COOKIE['password']))
+{
+	if(!($db->databaseLogin($_COOKIE['username'], $_COOKIE['password'])))
+	{
+		$db->databaseLogin('Guest', NULL);
+	}
+}
+else
+{
+	$db->databaseLogin('Guest', NULL);
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Admin Functions Page</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/databaseCSS.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="text-center">
+	<h3>Admin Functions</h3>
+</div>
+
+<h1>&nbsp;</h1>
+
+<div class="container">
+	<div class="row">
+		<div class="col-md-4">
+			<button type="button" class="btn btn-link" data-toggle="modal" data-target="#addItemWindow" style="font-size: 20px;">Add Item</button>
+		</div>
+		<div class="col-md-4">
+			<button type="button" class="btn btn-link" data-toggle="modal" data-target="#updateInventoryQuantityWindow" style="font-size: 20px;">Update Inventory Quantity</button>
+		</div>
+		<div class="col-md-4">
+			<button type="button" class="btn btn-link" data-toggle="modal" data-target="#deleteOrderWindow" style="font-size: 20px;">Delete Order</button>
+		</div>
+	</div>
+	<h1>&nbsp;</h1>
+	<div class="row">
+		<div class="col-md-4">
+			<button type="button" class="btn btn-link" data-toggle="modal" data-target="#deleteItemWindow" style="font-size: 20px;">Delete Item</button>
+		</div>
+		<div class="col-md-4">
+			<button type="button" class="btn btn-link" data-toggle="modal" data-target="#updateInventoryInfoWindow" style="font-size: 20px;">Update Inventory Information</button>
+		</div>
+		<div class="col-md-4">
+			<!--<button type="button" class="btn btn-link" data-toggle="modal" data-target="#" style="font-size: 20px;">Delete Vendor</button>-->
+			<!--<button type="button" class="btn btn-link" data-toggle="modal" data-target="#" style="font-size: 20px;">Delete Historical Usage</button>-->
+		</div>
+	</div>
+</div>
+
+<!--Add Item modal -->
+<div id="addItemWindow" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+		
+		<!--Add Item modal content -->
+		<div class="modal-content">
+			
+			<div class="modal-header">
+				<h4 class="modal-title">
+					Add Item to Inventory
+				</h4>
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+			</div>
+
+			<div class="modal-body">
+				<p>Add item to database.</p>
+				<p></p>
+				<form id="addItemForm" action="addItem.php" method="post" role="form" style="padding: 16px;">
+					<div class="form-group">
+						<label for="item_id">NSN</label>
+						<input type="number" class="form-control" id="item_id" name="item_id">
+					</div>
+					<div class="form-group">
+						<label for="item_name">Item Name</label>
+						<input type="text" class="form-control" id="item_name" name="item_name">
+					</div>
+					<div class="form-group">
+						<label for="item_desc">Item Description</label>
+						<textarea class="form-control" id="item_desc" name="item_desc" rows="3"></textarea>
+					</div>
+					<button type="submit" class="btn btn-primary">Add Item</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</form>
+			</div>
+
+		</div>
+
+	</div>	
+</div>
+
+
+<!--Delete Item modal -->
+<div id="deleteItemWindow" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+		
+		<!--Delete Item modal content -->
+		<div class="modal-content">
+			
+			<div class="modal-header">
+				<h4 class="modal-title">
+					Delete Item from Inventory
+				</h4>
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+			</div>
+
+			<div class="modal-body">
+				<p>Delete item from database.</p>
+				<p></p>
+				<form id="deleteItemForm" action="deleteItem.php" method="post" role="form" style="padding: 16px;">
+					<div class="form-group">
+						<label for="item_id">NSN</label>
+						<input type="number" class="form-control" id="item_id" name="item_id">
+					</div>
+					<button type="submit" class="btn btn-primary">Delete Item</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</form>
+			</div>
+
+		</div>
+
+	</div>	
+</div>
+
+<!--Update Inventory Quantity modal -->
+<div id="updateInventoryQuantityWindow" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+		
+		<!--Update Inventory Quantity modal content -->
+		<div class="modal-content">
+			
+			<div class="modal-header">
+				<h4 class="modal-title">
+					Update Inventory Quantity
+				</h4>
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+			</div>
+
+			<div class="modal-body">
+				<form id="updateInventoryQuantityForm" action="updateInventoryQuantity.php" method="post" role="form" style="padding: 16px;">
+					<?php
+						$db->ADMIN_getUpdatableInventoryQuantity();
+					?>
+					<button type="submit" class="btn btn-primary">Update Quantity</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</form>
+			</div>
+
+		</div>
+
+	</div>	
+</div>
+
+<!--Update Inventory Info modal -->
+<div id="updateInventoryInfoWindow" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+		
+		<!--Update Inventory Info modal content -->
+		<div class="modal-content">
+			
+			<div class="modal-header">
+				<h4 class="modal-title">
+					Update Inventory Information
+				</h4>
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+			</div>
+
+			<div class="modal-body">
+				<p>Select NSN, then update information. Options left blank will not be updated.</p>
+				<form id="updateInventoryInfoForm" action="updateInventoryInfo.php" method="post" role="form" style="padding: 16px;">
+					<?php
+						$db->ADMIN_getUpdatableInventoryInfo();
+					?>
+					<div class="form-group">
+						<label for="quantity">Quantity</label>
+						<input type="number" class="form-control" id="quantity" name="quantity">
+					</div>
+					<div class="form-group">
+						<label for="location">Item Location</label>
+						<input type="text" class="form-control" id="location" name="location">
+					</div>
+					<div class="form-group">
+						<label for="item_name">Par Level</label>
+						<input type="number" class="form-control" id="par_level" name="par_level">
+					</div>
+					<div class="form-group">
+						<label for="on_order">On Order</label>
+						<select name="on_order">
+							<option value="NOT SELECTED" selected></option>
+							<option value="FALSE">No</option>
+							<option value="TRUE">Yes</option>
+						</select>
+					</div>
+					<button type="submit" class="btn btn-primary">Update Info</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</form>
+			</div>
+
+		</div>
+
+	</div>	
+</div>
+
+<!--Delete Order modal -->
+<div id="deleteOrderWindow" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+		
+		<!--Delete Order modal content -->
+		<div class="modal-content">
+			
+			<div class="modal-header">
+				<h4 class="modal-title">
+					Delete Order
+				</h4>
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+			</div>
+
+			<div class="modal-body">
+				<p>Delete an unreceived order from database.</p>
+				<p></p>
+				<form id="deleteOrderForm" action="deleteOrder.php" method="post" role="form" style="padding: 16px;">
+					<?php
+						$db->ADMIN_getDeletableOrders();
+					?>
+					<button type="submit" class="btn btn-primary">Delete Order</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</form>
+			</div>
+
+		</div>
+
+	</div>	
+</div>
+
+
+</body>
+</html>

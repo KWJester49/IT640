@@ -1,0 +1,179 @@
+<?php
+require_once('../InterfaceLib.inc');
+
+function createGuestCookie()
+{
+	setcookie('username', 'Guest', time()+60*60*24, "/");
+	setcookie('password', NULL, time()+60*60*24, "/");
+}
+
+$db= new InventoryAccess();
+
+
+if(isset($_COOKIE['username']) && isset($_COOKIE['password']))
+{
+	
+	if($db->databaseLogin($_COOKIE['username'], $_COOKIE['password']))
+	{
+		setcookie('username', $_COOKIE['username'], time()+60*60*24, "/");
+		setcookie('password', $_COOKIE['password'], time()+60*60*24, "/");
+	}
+	else
+	{
+		createGuestCookie();
+	}
+}
+else
+{
+	createGuestCookie();
+}
+?>
+
+<html lang="en">
+<head>
+	<title>Main OR Storeroom</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/databaseCSS.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+	
+	<!-- Script to change content of page   -->
+	<script type="text/javascript">
+		function getInventoryPage()
+		{
+			document.getElementById("content").src = "inventory.html";
+		}
+
+		function getOrdersPage()
+		{
+			document.getElementById("content").src = "orders.html";
+		}
+
+		function getReportsPage(x)
+		{
+			var report= String(x);
+			switch(report)
+			{
+				case "itemsBelowPar":
+					document.getElementById("content").src = "itemsBelowPar.html";
+					break;
+				case "recommendedPar":
+					document.getElementById("content").src = "recommendedPar.html";
+					break;
+				case "historicalUsage":
+					document.getElementById("content").src = "historicalUsage.html";
+					break;
+			}
+		}
+
+		function getAdminPage()
+		{
+			document.getElementById("content").src = "admin.html";
+		}
+	</script>
+
+	
+</head>
+<body >
+
+
+<!-- Login to database modal -->
+<p class="text-right">
+	<?php 
+		if(isset($_COOKIE['username']))	
+		{
+	?>
+	<span><?php echo $_COOKIE['username']; ?></span>
+	<button type="button" class="btn btn-link" data-toggle="modal" data-target="#loginWindow">(Change Login)</button>		
+	<?php
+		}
+		else 
+		{
+	?>
+	<button type="button" class="btn btn-link" data-toggle="modal" data-target="#loginWindow">Login</button>
+	<?php
+		}
+	?>
+
+	<!--Login modal -->
+	<div id="loginWindow" class="modal fade" role="dialog">
+		<div class="modal-dialog">
+			
+			<!--Login modal content -->
+			<div class="modal-content">
+				
+				<div class="modal-header">
+					<h4 class="modal-title">
+						Login
+					</h4>
+					<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+				</div>
+
+				<div class="modal-body">
+					<form id="loginForm" action="login.php" method="post" role="form" style="padding: 16px;">
+						<div class="form-group">
+							<label for="username">Username</label>
+							<input type="text" placeholder="Enter Username" class="form-control" id="username" name="username">
+						</div>
+						<div class="form-group">
+							<label for="password">Password</label>
+							<input type="password" placeholder="Enter Password" class="form-control" id="password" name="password">
+						</div>
+						<button type="submit" class="btn btn-primary">Login</button>
+						<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+					</form>
+				</div>
+
+			</div>
+
+		</div>	
+	</div>
+</p>
+<!-- End login portion of code -->
+
+<div class="text-center">
+	<h1>Main Operating Room Inventory</h1>
+</div>
+
+<!-- Header line with options for the changing content -->
+<div class= "container">
+	<h3>
+		<div class="row">
+			<div class="col-sm-3">
+				<button class="btn btn-link" onclick="getInventoryPage();" style="font-size: 30px;">Inventory</button>
+			</div>
+			<div class="col-sm-3">
+				<button class="btn btn-link" onclick="getOrdersPage();" style="font-size: 30px;">Orders</button>
+			</div>
+			<div class="col-sm-3">
+				<div class="dropdown">
+					<button class="btn btn-link dropbtn" style="font-size: 30px;">Reports</button>
+					<div class="dropdown-content">
+						<a href="javascript:getReportsPage('itemsBelowPar');" id="itemsBelowPar">Items Below Par Level</a>
+						<a href="javascript:getReportsPage('recommendedPar');" id="recommendedPar">Recommended Par Levels</a>
+						<a href="javascript:getReportsPage('historicalUsage');" id="historicalUsage">Historical Item Usage</a>
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-3">
+				<button class="btn btn-link" onclick="getAdminPage();" style="font-size: 30px;">Admin Functions</button>
+			</div>
+		</div>
+	</h3>
+</div>
+<hr>
+<!-- End header line with options for the changing content -->
+
+<!-- Content of web page, determined by header line links -->
+<div class="dbIFrameWindow">
+	<iframe id="content" src="inventory.html" class="dbIFrame">
+	</iframe>
+</div>
+<!-- End content of web page, determined by header line links -->
+
+
+
+</body>
+</html>

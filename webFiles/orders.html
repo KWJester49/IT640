@@ -1,0 +1,124 @@
+<?php
+require_once('../InterfaceLib.inc');
+
+$db= new InventoryAccess();
+
+if(isset($_COOKIE['username']) && isset($_COOKIE['password']))
+{
+	if(!($db->databaseLogin($_COOKIE['username'], $_COOKIE['password'])))
+	{
+		$db->databaseLogin('Guest', NULL);
+	}
+}
+else
+{
+	$db->databaseLogin('Guest', NULL);
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Orders Page</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/databaseCSS.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="text-center">
+	<h3>Orders</h3>
+</div>
+
+
+<div class="container">
+	<div class="row">
+		<div class="col-md-4"></div>
+		<div class="col-md-4">
+			<div class="btn-group btn-group-justified">
+				<button type="button" class="btn btn-success" data-toggle="modal" data-target="#receiveOrderWindow">Receive an Order</button>
+				<button type="button" class="btn btn-success" data-toggle="modal" data-target="#addOrderWindow">Upload an Order</button>
+			</div>
+		</div>
+		<div class="col-md-4"></div>
+	</div>
+</div>
+
+<!--Receive Order modal -->
+<div id="receiveOrderWindow" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+		
+		<!--Login modal content -->
+		<div class="modal-content">
+			
+			<div class="modal-header">
+				<h4 class="modal-title">
+					Receivable Orders
+				</h4>
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+			</div>
+
+			<div class="modal-body">
+				<p>Select what orders the storeroom has received.</p>
+				<p></p>
+				<form id="receiveOrderForm" action="receiveOrders.php" method="post" role="form" style="padding: 16px;">
+					<?php
+						$db->getReceivableOrders();
+					?>
+					<button type="submit" class="btn btn-primary">Receive Orders</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</form>
+			</div>
+
+		</div>
+
+	</div>	
+</div>
+
+<!--Upload Order modal -->
+<div id="addOrderWindow" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+		
+		<!--Login modal content -->
+		<div class="modal-content">
+			
+			<div class="modal-header">
+				<h4 class="modal-title">
+					Receivable Orders
+				</h4>
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+			</div>
+
+			<div class="modal-body">
+				<form id="uploadOrderForm" action="uploadOrder.php" method="post" role="form" style="padding: 16px;" enctype="multipart/form-data">
+					<p> Select .csv order file to upload</p>
+					<input type="file" name="uploadFile">
+					<p></p>
+					<button type="submit" class="btn btn-primary">Upload Orders</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+				</form>
+			</div>
+
+		</div>
+
+	</div>	
+</div>
+<!-- End Upload Order modal -->
+
+
+<div class="row">
+	<div class="col-md-1"></div>
+	<div class="col-md-10">
+
+		<?php
+			$db->reportItemsOrdered();
+		?>
+	</div>
+	<div class="col-md-1"></div>
+</div>
+
+
+</body>
+</html>

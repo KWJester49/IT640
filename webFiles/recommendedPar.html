@@ -1,0 +1,49 @@
+<?php
+require_once('../InterfaceLib.inc');
+
+$db= new InventoryAccess();
+
+if(isset($_COOKIE['username']) && isset($_COOKIE['password']))
+{
+	if(!($db->databaseLogin($_COOKIE['username'], $_COOKIE['password'])))
+	{
+		$db->databaseLogin('Guest', NULL);
+	}
+}
+else
+{
+	$db->databaseLogin('Guest', NULL);
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Recommended Par Level Report</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/databaseCSS.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="text-center">
+	<h3>Recommended Par Level Report</h3>
+</div>
+
+
+
+<div class="row">
+	<div class="col-md-1"></div>
+	<div class="col-md-10">
+		<?php
+			$db->reportRecommendedParLevels();
+		?>
+	</div>
+	<div class="col-md-1"></div>
+</div>
+
+
+</body>
+</html>
